@@ -1,0 +1,4 @@
+{
+  "watch": ["index.js", "config", "constant", "controllers", "middleware", "models", "routes", "utils"],
+  "ignore": ["public/creatives/**", "node_modules", "tests"]
+}

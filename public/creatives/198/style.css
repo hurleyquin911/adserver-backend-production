@@ -1,0 +1,183 @@
+/* Pesiar - Rich Media Banner 300x600 (kuis liburan)
+   Palet: langit biru muda, biru tua, oranye matahari terbit. */
+
+:root {
+  --navy: #0b2a4a;
+  --sunrise: #ff7a3d;
+  --teal: #0e7c86;
+  --muted: #4b6178;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 300px;
+  height: 600px;
+  overflow: hidden;
+  background: #eaf6ff;
+}
+
+body {
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  color: var(--navy);
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; text-align: left; }
+[hidden] { display: none !important; }
+
+.banner {
+  position: relative;
+  width: 300px;
+  height: 600px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #bfe3ff 0%, #eaf6ff 38%, #ffffff 100%);
+}
+
+/* ---------- Bar atas dan judul ---------- */
+.topbar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 26px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.logo { font-size: 13px; font-weight: 800; letter-spacing: -.01em; }
+.legal { font-size: 8px; color: var(--muted); }
+
+.head { position: absolute; top: 34px; left: 16px; right: 16px; }
+.head h1 {
+  font-size: 27px;
+  line-height: 1.06;
+  font-weight: 900;
+  letter-spacing: -.035em;
+}
+.head p { margin-top: 5px; font-size: 11.5px; color: var(--muted); }
+
+.dots {
+  position: absolute;
+  top: 118px; left: 16px;
+  display: flex;
+  gap: 6px;
+  list-style: none;
+}
+.dots li {
+  width: 8px; height: 8px;
+  border-radius: 4px;
+  background: rgba(11, 42, 74, .25);
+  transition: width .25s ease, background .25s ease;
+}
+.dots li.on { width: 22px; background: var(--navy); }
+
+/* ---------- Langkah ---------- */
+.steps { position: absolute; top: 140px; left: 16px; width: 268px; height: 380px; }
+.step {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px);
+  transition: opacity .3s ease, transform .3s ease, visibility 0s linear .3s;
+}
+.step.is-active { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; }
+.step > h2 { margin-bottom: 12px; font-size: 14px; font-weight: 800; }
+
+.opt {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  height: 84px;
+  margin-bottom: 14px;
+  padding: 14px;
+  background: #fff;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  box-shadow: 0 1px 0 rgba(11, 42, 74, .08), 0 6px 14px -8px rgba(11, 42, 74, .35);
+  transition: border-color .15s ease, transform .15s ease;
+}
+.opt:hover { border-color: var(--sunrise); transform: translateY(-1px); }
+.opt b { display: block; font-size: 17px; font-weight: 800; letter-spacing: -.01em; }
+.opt small { display: block; margin-top: 2px; font-size: 11.5px; color: var(--muted); }
+
+.opt--day { display: block; height: 66px; padding: 12px 16px; }
+.opt--day b { font-size: 20px; color: var(--sunrise); }
+
+/* Ikon buatan CSS */
+.ico { position: relative; display: block; width: 56px; height: 56px; overflow: hidden; border-radius: 14px; }
+.ico-pantai { background: linear-gradient(180deg, #ffb36b 0 55%, var(--teal) 55% 100%); }
+.ico-pantai::before {
+  content: "";
+  position: absolute;
+  left: 19px; top: 13px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #fff2c2;
+}
+.ico-gunung { background: #bfe6ff; }
+.ico-gunung::before,
+.ico-gunung::after { content: ""; position: absolute; bottom: 0; }
+.ico-gunung::before { left: -6px; width: 40px; height: 40px; background: var(--navy); clip-path: polygon(0 100%, 50% 0, 100% 100%); }
+.ico-gunung::after  { right: -8px; width: 34px; height: 28px; background: var(--teal); clip-path: polygon(0 100%, 52% 0, 100% 100%); }
+.ico-kota {
+  background:
+    linear-gradient(#7d89e0, #7d89e0) 6px 100% / 10px 28px no-repeat,
+    linear-gradient(#a3acf0, #a3acf0) 20px 100% / 12px 38px no-repeat,
+    linear-gradient(#7d89e0, #7d89e0) 36px 100% / 10px 22px no-repeat,
+    #2b2f6b;
+}
+
+/* ---------- Hasil ---------- */
+.art { position: relative; height: 190px; overflow: hidden; border-radius: 18px; }
+.art-pantai {
+  background:
+    radial-gradient(circle at 50% 52%, #fff2c2 0 30px, #ffd88a 31px 44px, transparent 45px),
+    linear-gradient(180deg, #ff9a5a 0 52%, var(--teal) 52% 100%);
+}
+.art-gunung { background: linear-gradient(180deg, #8fd0ff, #e6f5ff); }
+.art-gunung::before,
+.art-gunung::after { content: ""; position: absolute; bottom: 0; }
+.art-gunung::before { left: -10%; width: 72%; height: 82%; background: var(--navy); clip-path: polygon(0 100%, 48% 0, 100% 100%); }
+.art-gunung::after  { right: -12%; width: 68%; height: 60%; background: var(--teal); clip-path: polygon(0 100%, 52% 0, 100% 100%); }
+.art-kota {
+  background:
+    radial-gradient(circle at 78% 24%, #fff6d6 0 16px, transparent 17px),
+    linear-gradient(#7d89e0, #7d89e0) 18px 100% / 34px 70px no-repeat,
+    linear-gradient(#a3acf0, #a3acf0) 60px 100% / 40px 112px no-repeat,
+    linear-gradient(#7d89e0, #7d89e0) 108px 100% / 30px 58px no-repeat,
+    linear-gradient(#a3acf0, #a3acf0) 146px 100% / 44px 90px no-repeat,
+    linear-gradient(#7d89e0, #7d89e0) 198px 100% / 36px 64px no-repeat,
+    linear-gradient(180deg, #2b2f6b, #6a5acd 70%, #ffb38a);
+}
+
+.rec-label { margin-top: 14px; font-size: 11.5px; color: var(--muted); }
+#recTitle { margin: 2px 0 0; font-size: 24px; line-height: 1.1; font-weight: 900; letter-spacing: -.03em; }
+.rec-dur { margin-top: 4px; font-size: 13px; font-weight: 800; color: #d4531a; }
+.rec-text { margin-top: 6px; font-size: 12px; line-height: 1.4; color: var(--muted); }
+.again { margin-top: 10px; font-size: 11.5px; color: var(--navy); text-decoration: underline; text-underline-offset: 2px; }
+
+/* ---------- CTA ---------- */
+.cta {
+  position: absolute;
+  top: 538px; left: 16px; right: 16px;
+  height: 46px;
+  text-align: center;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--navy);
+  background: var(--sunrise);
+}
+.cta:hover { filter: brightness(1.07); }
+.cta:active { transform: translateY(1px); }
+
+.opt:focus-visible,
+.again:focus-visible,
+.cta:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

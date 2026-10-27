@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <title>Publisher Test Page — tag universal</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; background: #f6f7f9; color: #222; }
+      .slot { margin: 1.5rem 0; padding: 1rem; background: #fff; border: 1px dashed #999; }
+      .ad { overflow: hidden; background: #f8fafc; }
+      .demo { width: 300px; height: 250px; background: #0ea5e9; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; }
+      .demo a, .demo button { background: #fff; color: #0f172a; padding: 0.4rem 0.8rem; text-decoration: none; border: 0; cursor: pointer; font-weight: 600; }
+      code { background: #eee; padding: 0.1rem 0.3rem; }
+      h2 { font-size: 1rem; margin: 1.75rem 0 0.5rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Publisher Test Page</h1>
+    <p>
+      Buka dari origin berbeda, contoh
+      <code>npx --yes serve . -l 5500</code> di <code>backend/public/test</code>
+      lalu <code>http://127.0.0.1:5500/publisher.html</code>.
+      Override ad server: <code>?s=http://localhost:4000</code>.
+    </p>
+    <p>
+      Default: wrapper berukuran + tag <strong>tanpa</strong> <code>data-size</code>.
+      Tag mengukur induknya. Creative harus ukuran <strong>persis sama</strong>; kalau tidak → no_fill.
+    </p>
+
+    <h2>1. 300×250</h2>
+    <div class="slot">
+      <div class="ad" id="slot-300x250" style="width:300px;height:250px"></div>
+    </div>
+
+    <h2>2. 728×90</h2>
+    <div class="slot">
+      <div class="ad" id="slot-728x90" style="width:728px;height:90px"></div>
+    </div>
+
+    <h2>3. 970×90</h2>
+    <div class="slot">
+      <div class="ad" id="slot-970x90" style="width:970px;height:90px"></div>
+    </div>
+
+    <h2>4. 970×250</h2>
+    <div class="slot">
+      <div class="ad" id="slot-970x250" style="width:970px;height:250px"></div>
+    </div>
+
+    <h2>Override data-size (opsional)</h2>
+    <div class="slot">
+      <p style="font-size:12px;color:#64748b;margin:0 0 0.5rem">Kontainer tanpa ukuran eksplisit; memakai <code>data-size=&quot;300x600&quot;</code>.</p>
+      <div id="slot-override"></div>
+    </div>
+
+    <h2>Contoh creative klik</h2>
+    <div class="slot">
+      <div class="demo">
+        <button type="button" id="demo-open">window.open(clickTag)</button>
+        <a id="demo-anchor" target="_blank" rel="noopener">target=_blank</a>
+      </div>
+    </div>
+    <script>
+      (function () {
+        var params = new URLSearchParams(location.search);
+        var demoClick = params.get('clickTag') || 'https://example.com/landing';
+        document.getElementById('demo-open').onclick = function () {
+          window.open(demoClick, '_blank');
+        };
+        document.getElementById('demo-anchor').href = demoClick;
+        var AD_SERVER = params.get('s') || 'http://localhost:4000';
+
+        function mount(id, sizeAttr) {
+          var s = document.createElement('script');
+          s.src = AD_SERVER + '/ad/tag.js';
+          if (sizeAttr) s.setAttribute('data-size', sizeAttr);
+          document.getElementById(id).appendChild(s);
+        }
+        // Tanpa data-size — ukur wrapper
+        mount('slot-300x250');
+        mount('slot-728x90');
+        mount('slot-970x90');
+        mount('slot-970x250');
+        // Override opsional
+        mount('slot-override', '300x600');
+      })();
+    </script>
+  </body>
+</html>

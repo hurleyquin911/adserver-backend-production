@@ -1,0 +1,95 @@
+/* Gudang Murah - Rich Media Banner 320x50 (flash sale)
+   Palet: putih, biru listrik, kuning. */
+
+:root {
+  --ink: #111827;
+  --blue: #1b44ff;
+  --yellow: #ffd400;
+  --muted: #5b6475;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 320px;
+  height: 50px;
+  overflow: hidden;
+  background: #fff;
+}
+
+body {
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+
+.banner {
+  position: relative;
+  width: 320px;
+  height: 50px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  background: #fff;
+  border-bottom: 3px solid var(--blue);
+}
+
+.msg { flex: 1; min-width: 0; line-height: 1.1; }
+.msg b { display: block; font-size: 14px; font-weight: 900; letter-spacing: -.02em; }
+.msg small { display: block; margin-top: 2px; font-size: 10px; color: var(--muted); white-space: nowrap; }
+
+.timer { display: flex; align-items: center; gap: 2px; }
+.timer span {
+  min-width: 24px;
+  padding: 5px 0;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  background: var(--blue);
+  border-radius: 5px;
+}
+.timer i { font-style: normal; font-weight: 800; color: var(--blue); }
+
+.bell {
+  display: grid;
+  place-items: center;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  color: var(--blue);
+  border: 2px solid var(--blue);
+  transition: background .15s ease, color .15s ease;
+}
+.bell[aria-pressed="true"] { background: var(--yellow); color: var(--ink); border-color: var(--yellow); }
+.bell[aria-pressed="true"] svg { animation: ring .6s ease; transform-origin: 50% 10%; }
+
+.cta {
+  width: 56px; height: 32px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 800;
+  background: var(--yellow);
+}
+.cta:hover { filter: brightness(.95); }
+.cta:active { transform: translateY(1px); }
+
+.bell:focus-visible,
+.cta:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+.legal { position: absolute; right: 4px; top: 1px; font-size: 7px; color: #9aa3b2; }
+
+@keyframes ring {
+  20% { transform: rotate(18deg); }
+  40% { transform: rotate(-16deg); }
+  60% { transform: rotate(10deg); }
+  80% { transform: rotate(-6deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

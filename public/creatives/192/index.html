@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=300, initial-scale=1">
+  <meta name="ad.size" content="width=300,height=250">
+  <title>Pasar Kilat - Rich Media Banner 300x250 (kartu gosok)</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="banner" id="banner" aria-label="Iklan Pasar Kilat">
+
+    <header class="topbar">
+      <span class="logo">
+        <svg class="bolt" viewBox="0 0 12 16" aria-hidden="true" focusable="false"><path d="M7 0 0 9h4.5L3.5 16 12 6.5H7.4z" fill="currentColor"/></svg>
+        pasar kilat
+      </span>
+      <span class="legal">contoh materi iklan</span>
+    </header>
+
+    <section class="intro">
+      <h1>Gosok, dapat voucher!</h1>
+      <p>Berlaku sampai akhir pekan.</p>
+    </section>
+
+    <section class="card hint" id="card" aria-label="Kartu voucher">
+      <div class="voucher">
+        <p class="v-label">Voucher belanja</p>
+        <p class="v-amount">Rp50.000</p>
+        <p class="v-code">kode <b>KILAT50</b></p>
+      </div>
+      <canvas id="foil" width="268" height="100" aria-hidden="true"></canvas>
+      <i class="notch l" aria-hidden="true"></i>
+      <i class="notch r" aria-hidden="true"></i>
+      <div class="burst" id="burst" aria-hidden="true"></div>
+      <button type="button" class="replay" id="replay" hidden>Gosok lagi</button>
+    </section>
+
+    <button type="button" class="reveal-btn" id="revealBtn">atau tampilkan langsung</button>
+
+    <button type="button" class="cta" id="cta">Belanja sekarang</button>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

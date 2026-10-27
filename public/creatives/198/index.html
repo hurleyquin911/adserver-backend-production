@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=300, initial-scale=1">
+  <meta name="ad.size" content="width=300,height=600">
+  <title>Pesiar - Rich Media Banner 300x600 (kuis liburan)</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="banner" id="banner" aria-label="Iklan Pesiar">
+
+    <header class="topbar">
+      <span class="logo">pesiar</span>
+      <span class="legal">contoh materi iklan</span>
+    </header>
+
+    <section class="head">
+      <h1 id="title">Liburan tipe apa kamu?</h1>
+      <p id="sub">Jawab dua pertanyaan, kami carikan tujuannya.</p>
+    </section>
+
+    <ol class="dots" id="dots" aria-hidden="true"><li class="on"></li><li></li><li></li></ol>
+
+    <div class="steps">
+
+      <!-- Langkah 1: suasana -->
+      <section class="step is-active" id="step1" aria-labelledby="q1">
+        <h2 id="q1">1. Pilih suasana</h2>
+        <button type="button" class="opt" data-suasana="pantai">
+          <span class="ico ico-pantai" aria-hidden="true"></span>
+          <span><b>Pantai</b><small>laut, pasir, dan senja</small></span>
+        </button>
+        <button type="button" class="opt" data-suasana="gunung">
+          <span class="ico ico-gunung" aria-hidden="true"></span>
+          <span><b>Gunung</b><small>udara sejuk dan matahari terbit</small></span>
+        </button>
+        <button type="button" class="opt" data-suasana="kota">
+          <span class="ico ico-kota" aria-hidden="true"></span>
+          <span><b>Kota</b><small>kuliner, budaya, dan pasar</small></span>
+        </button>
+      </section>
+
+      <!-- Langkah 2: durasi -->
+      <section class="step" id="step2" aria-labelledby="q2">
+        <h2 id="q2">2. Berapa hari?</h2>
+        <button type="button" class="opt opt--day" data-hari="3"><b>3 hari</b><small>2 malam, pas untuk akhir pekan panjang</small></button>
+        <button type="button" class="opt opt--day" data-hari="5"><b>5 hari</b><small>4 malam, cukup untuk cuti singkat</small></button>
+        <button type="button" class="opt opt--day" data-hari="7"><b>7 hari</b><small>6 malam, santai tanpa buru-buru</small></button>
+      </section>
+
+      <!-- Langkah 3: hasil -->
+      <section class="step" id="step3" aria-live="polite">
+        <div class="art" id="art"></div>
+        <p class="rec-label">Rekomendasi untukmu</p>
+        <h2 id="recTitle"></h2>
+        <p class="rec-dur" id="recDur"></p>
+        <p class="rec-text" id="recText"></p>
+        <button type="button" class="again" id="again">Ulangi kuis</button>
+      </section>
+
+    </div>
+
+    <button type="button" class="cta" id="cta">Lihat paketnya</button>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

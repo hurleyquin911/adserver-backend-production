@@ -1,0 +1,229 @@
+/* Pasar Kilat - Rich Media Banner 300x250 (kartu gosok)
+   Palet: ungu malam, lime, magenta */
+
+:root {
+  --ink: #1b0f33;
+  --ink-2: #2c1650;
+  --lime: #d8f25a;
+  --magenta: #ff3d8b;
+  --paper: #fff6fb;
+  --lilac: #c9b8ee;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
+
+html, body {
+  width: 300px;
+  height: 250px;
+  overflow: hidden;
+  background: var(--ink);
+}
+
+body {
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  color: var(--paper);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.banner {
+  position: relative;
+  width: 300px;
+  height: 250px;
+  overflow: hidden;
+  background: radial-gradient(120% 90% at 0% 0%, var(--ink-2) 0%, var(--ink) 65%);
+}
+
+/* ---------- Bar atas ---------- */
+.topbar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 26px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: -.01em;
+}
+.bolt { width: 8px; height: 11px; color: var(--magenta); }
+.legal { font-size: 8px; color: var(--lilac); opacity: .85; }
+
+/* ---------- Judul ---------- */
+.intro {
+  position: absolute;
+  top: 28px; left: 16px; right: 16px;
+}
+.intro h1 {
+  font-size: 21px;
+  line-height: 1.1;
+  font-weight: 900;
+  letter-spacing: -.025em;
+}
+.intro p {
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--lilac);
+}
+
+/* ---------- Kartu gosok ---------- */
+.card {
+  position: absolute;
+  top: 76px; left: 16px;
+  width: 268px; height: 100px;
+  overflow: hidden;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #43177a 0%, #a3175f 100%);
+  outline: 2px solid rgba(216, 242, 90, .55);
+}
+
+.voucher {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.v-label { font-size: 11px; font-weight: 600; color: var(--lilac); }
+.v-amount {
+  margin: 1px 0 3px;
+  font-size: 36px;
+  line-height: 1.05;
+  font-weight: 900;
+  letter-spacing: -.03em;
+  color: var(--lime);
+}
+.v-code { font-size: 11px; color: var(--paper); }
+.v-code b {
+  margin-left: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+  letter-spacing: .04em;
+  border: 1px dashed var(--lime);
+  border-radius: 6px;
+}
+
+canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 268px; height: 100px;
+  touch-action: none;
+  cursor: crosshair;
+  transition: opacity .45s ease;
+}
+.card.is-revealed canvas { opacity: 0; pointer-events: none; }
+
+/* Lubang tiket di sisi kiri dan kanan */
+.notch {
+  position: absolute;
+  top: 50%;
+  z-index: 3;
+  width: 16px; height: 16px;
+  margin-top: -8px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+.notch.l { left: -8px; }
+.notch.r { right: -8px; }
+
+/* Kilau petunjuk sebelum pengguna menggosok */
+.card.hint::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, .7) 50%, transparent 62%);
+  transform: translateX(-110%);
+  animation: sweep 2.8s ease-in-out 1s infinite;
+}
+
+.burst { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.burst i {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 7px; height: 11px;
+  border-radius: 2px;
+  background: var(--c);
+  opacity: 0;
+  animation: pop .9s ease-out forwards;
+}
+
+.replay {
+  position: absolute;
+  right: 10px; bottom: 8px;
+  z-index: 5;
+  padding: 3px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--lime);
+  border-radius: 999px;
+}
+
+/* ---------- Tombol ---------- */
+.reveal-btn {
+  position: absolute;
+  top: 178px; left: 50%;
+  transform: translateX(-50%);
+  padding: 0 8px;
+  height: 16px;
+  font-size: 10.5px;
+  color: var(--lilac);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
+.reveal-btn:hover { color: var(--paper); }
+
+.cta {
+  position: absolute;
+  top: 198px; left: 16px; right: 16px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--lime);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: .01em;
+}
+.cta:hover { background: #e6ff72; }
+.cta:active { transform: translateY(1px); }
+
+.cta:focus-visible,
+.reveal-btn:focus-visible,
+.replay:focus-visible {
+  outline: 2px solid var(--magenta);
+  outline-offset: 2px;
+}
+
+/* ---------- Animasi ---------- */
+@keyframes sweep {
+  0%   { transform: translateX(-110%); }
+  55%, 100% { transform: translateX(110%); }
+}
+@keyframes pop {
+  0%   { opacity: 1; transform: translate(0, 0) rotate(0); }
+  100% { opacity: 0; transform: translate(var(--x), var(--y)) rotate(var(--r)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

@@ -3,7 +3,7 @@ const { z } = require('zod');
 const db = require('../models');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
-const { advertiserScopeWhere, assertAdvertiserAccess } = require('../utils/scope');
+const { advertiserScopeWhere, assertAdvertiserAccess, isUnscoped } = require('../utils/scope');
 const {
   ROLE,
   SYSTEM_ROLE_NAMES,
@@ -62,18 +62,18 @@ async function assertSystemRole(role) {
 }
 
 function assertAdvertiserForRole(role, advertiserId) {
-  const needsBrand = isAdminName(role.name) || isUsersName(role.name);
+  const needsBrand = isUsersName(role.name);
   if (needsBrand && (advertiserId == null || advertiserId === '')) {
     throw new AppError(
       'VALIDATION_ERROR',
-      `Pilih Brand untuk role ${isAdminName(role.name) ? ROLE.ADMIN : ROLE.USERS}`,
+      `Pilih Brand untuk role ${ROLE.USERS}`,
       400
     );
   }
-  if (isSuperadminName(role.name) && advertiserId != null && advertiserId !== '') {
+  if ((isSuperadminName(role.name) || isAdminName(role.name)) && advertiserId != null && advertiserId !== '') {
     throw new AppError(
       'VALIDATION_ERROR',
-      'Brand tidak diperlukan untuk Superadmin',
+      'Brand tidak diperlukan untuk Superadmin atau Admin',
       400
     );
   }
@@ -150,7 +150,7 @@ const getOne = asyncHandler(async (req, res) => {
 
 const create = asyncHandler(async (req, res) => {
   const body = createSchema.parse(req.body);
-  if (req.user.advertiser_id != null) {
+  if (!isUnscoped(req.user) && req.user.advertiser_id != null) {
     body.advertiser_id = Number(req.user.advertiser_id);
   }
   const role = await db.Role.findByPk(body.role_id);
@@ -183,7 +183,7 @@ const update = asyncHandler(async (req, res) => {
     throw new AppError('NOT_FOUND', 'User tidak ditemukan', 404);
   }
   await assertCanManageTargetUser(req.user, user);
-  if (req.user.advertiser_id != null) {
+  if (!isUnscoped(req.user) && req.user.advertiser_id != null) {
     delete body.advertiser_id;
   }
   if (body.role_id != null) {
@@ -206,9 +206,13 @@ const update = asyncHandler(async (req, res) => {
   }
   const nextRoleId = body.role_id != null ? body.role_id : user.role_id;
   const nextRole = await db.Role.findByPk(nextRoleId);
-  const nextAdv =
-    body.advertiser_id !== undefined ? body.advertiser_id : user.advertiser_id;
+  const nextAdv = nextRole && (isSuperadminName(nextRole.name) || isAdminName(nextRole.name))
+    ? null
+    : body.advertiser_id !== undefined ? body.advertiser_id : user.advertiser_id;
   if (nextRole) assertAdvertiserForRole(nextRole, nextAdv);
+  if (nextRole && (isSuperadminName(nextRole.name) || isAdminName(nextRole.name))) {
+    body.advertiser_id = null;
+  }
   Object.assign(user, body);
   await user.save();
   const full = await db.User.findByPk(user.id, {

@@ -2,9 +2,11 @@ const { Op, fn, col } = require('sequelize');
 const { z } = require('zod');
 const db = require('../models');
 const asyncHandler = require('../utils/asyncHandler');
+const AppError = require('../utils/AppError');
 const { campaignScopeInclude } = require('../utils/scope');
 const { rangeStart, rangeEnd } = require('../utils/reportTz');
 const env = require('../config/env');
+const { recordRateChange, normalizeRate } = require('../utils/billingRateHistory');
 
 const dateSchema = z
   .string()
@@ -23,6 +25,22 @@ const querySchema = z
     message: 'Tanggal mulai harus sebelum atau sama dengan tanggal selesai',
     path: ['from'],
   });
+
+const pricingChangeSchema = z.object({
+  cpm_usd: z.preprocess(
+    (value) => {
+      if (value == null || value === '') return null;
+      if (typeof value === 'string') {
+        const normalized = value.trim();
+        if (!/^\d{1,6}(?:\.\d{1,4})?$/.test(normalized)) return Number.NaN;
+        return Number(normalized);
+      }
+      return value;
+    },
+    z.number().finite().min(0).max(999999.9999).nullable()
+  ),
+  reason: z.string().trim().min(5).max(500),
+});
 
 function centsFor(impressions, cpmUsd) {
   return Math.round((Number(impressions) * Number(cpmUsd)) / 10);
@@ -138,4 +156,89 @@ const exportCsv = asyncHandler(async (req, res) => {
   res.send(lines.join('\r\n'));
 });
 
-module.exports = { list, exportCsv, loadBilling, centsFor, csvCell };
+const history = asyncHandler(async (req, res) => {
+  const rows = await db.BillingRateHistory.findAll({
+    include: [
+      {
+        model: db.Creative,
+        as: 'creative',
+        required: true,
+        paranoid: false,
+        attributes: ['id', 'name'],
+        include: [
+          {
+            model: db.Campaign,
+            as: 'campaign',
+            required: true,
+            where: campaignScopeInclude(req.user),
+            attributes: ['id', 'name'],
+          },
+        ],
+      },
+      {
+        model: db.User,
+        as: 'changedBy',
+        attributes: ['id', 'name', 'email'],
+      },
+    ],
+    order: [['created_at', 'DESC'], ['id', 'DESC']],
+    limit: 200,
+  });
+
+  res.json({
+    data: rows.map((row) => ({
+      id: String(row.id),
+      creative: {
+        id: String(row.creative.id),
+        name: row.creative.name,
+        campaign: {
+          id: String(row.creative.campaign.id),
+          name: row.creative.campaign.name,
+        },
+      },
+      old_cpm_usd: normalizeRate(row.old_cpm_usd),
+      new_cpm_usd: normalizeRate(row.new_cpm_usd),
+      reason: row.reason,
+      changed_by: row.changedBy
+        ? { id: String(row.changedBy.id), name: row.changedBy.name }
+        : null,
+      changed_at: row.created_at,
+    })),
+  });
+});
+
+const updatePricing = asyncHandler(async (req, res) => {
+  const body = pricingChangeSchema.parse(req.body);
+  const updated = await db.sequelize.transaction(async (transaction) => {
+    const creative = await db.Creative.findByPk(req.params.creativeId, {
+      include: [{ model: db.Campaign, as: 'campaign' }],
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+    if (!creative || !creative.campaign) {
+      throw new AppError('NOT_FOUND', 'Creative tidak ditemukan', 404);
+    }
+
+    const oldRate = creative.cpm_usd;
+    await creative.update({ cpm_usd: body.cpm_usd }, { transaction });
+    const historyRow = await recordRateChange({
+      creativeId: creative.id,
+      oldRate,
+      newRate: creative.cpm_usd,
+      changedBy: req.user.id,
+      reason: body.reason,
+      transaction,
+    });
+    return { creative, changed: Boolean(historyRow) };
+  });
+
+  res.json({
+    data: {
+      id: String(updated.creative.id),
+      cpm_usd: normalizeRate(updated.creative.cpm_usd),
+      changed: updated.changed,
+    },
+  });
+});
+
+module.exports = { list, exportCsv, history, updatePricing, loadBilling, centsFor, csvCell };

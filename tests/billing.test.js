@@ -1,6 +1,7 @@
 const db = require('../models');
 const { centsFor, csvCell, loadBilling } = require('../controllers/billingController');
 const requireBillingRole = require('../middleware/requireBillingRole');
+const { recordRateChange } = require('../utils/billingRateHistory');
 
 describe('Billing helpers', () => {
   test('calculates USD per thousand impressions in cents', () => {
@@ -61,18 +62,53 @@ describe('Billing helpers', () => {
       aggregateQuery.mockRestore();
     }
   });
+
+  test('records rate changes with actor and required terms', async () => {
+    const create = jest.spyOn(db.BillingRateHistory, 'create').mockResolvedValue({ id: 21 });
+    try {
+      const history = await recordRateChange({
+        creativeId: 12,
+        oldRate: '0.5000',
+        newRate: '0.7500',
+        changedBy: 7,
+        reason: 'Updated contract rate',
+      });
+
+      expect(history).toEqual({ id: 21 });
+      expect(create).toHaveBeenCalledWith(
+        {
+          creative_id: 12,
+          old_cpm_usd: 0.5,
+          new_cpm_usd: 0.75,
+          changed_by: 7,
+          reason: 'Updated contract rate',
+        },
+        { transaction: undefined }
+      );
+      expect(await recordRateChange({
+        creativeId: 12,
+        oldRate: '0.7500',
+        newRate: 0.75,
+        changedBy: 7,
+        reason: 'No actual rate change',
+      })).toBeNull();
+      expect(create).toHaveBeenCalledTimes(1);
+    } finally {
+      create.mockRestore();
+    }
+  });
 });
 
 describe('Billing role access', () => {
-  test.each(['Admin', 'Users'])('%s can access Billing', (name) => {
+  test.each(['Superadmin', 'Admin', 'Users'])('%s can access Billing', (name) => {
     const next = jest.fn();
     requireBillingRole({ user: { role: { name } } }, {}, next);
     expect(next).toHaveBeenCalledWith();
   });
 
-  test('Superadmin is denied Billing access', () => {
+  test('unknown roles are denied Billing access', () => {
     const next = jest.fn();
-    requireBillingRole({ user: { role: { name: 'Superadmin' } } }, {}, next);
+    requireBillingRole({ user: { role: { name: 'Guest' } } }, {}, next);
     expect(next).toHaveBeenCalledWith(
       expect.objectContaining({ code: 'FORBIDDEN', status: 403 })
     );

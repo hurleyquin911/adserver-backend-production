@@ -48,11 +48,35 @@ async function resolveTagAdvertiser(req) {
 }
 
 const getTag = asyncHandler(async (req, res) => {
-  const advertiser = await resolveTagAdvertiser(req);
+  const rawCreativeId = req.query.creative_id;
+  let selectedCreative = null;
+  let advertiser;
+  if (rawCreativeId != null && String(rawCreativeId).trim() !== '') {
+    const creativeId = Number(rawCreativeId);
+    if (!Number.isSafeInteger(creativeId) || creativeId < 1) {
+      throw new AppError('VALIDATION_ERROR', 'creative_id tidak valid', 400);
+    }
+    selectedCreative = await db.Creative.findByPk(creativeId, {
+      include: [
+        {
+          model: db.Campaign,
+          as: 'campaign',
+          required: true,
+          include: [{ model: db.Advertiser, as: 'advertiser', required: true }],
+        },
+      ],
+    });
+    if (!selectedCreative || !assertAdvertiserAccess(req.user, selectedCreative.campaign.advertiser_id)) {
+      throw new AppError('NOT_FOUND', 'Creative tidak ditemukan', 404);
+    }
+    advertiser = selectedCreative.campaign.advertiser;
+  } else {
+    advertiser = await resolveTagAdvertiser(req);
+  }
   const base = env.PUBLIC_BASE_URL;
   const tagKey = advertiser.tag_key;
   const advertiserId = Number(advertiser.id);
-  const eligible = await countEligibleBySize({ advertiserId });
+  const eligible = selectedCreative ? [] : await countEligibleBySize({ advertiserId });
   const eligibleMap = new Map(eligible.map((s) => [s.size, s.count]));
 
   const macroSet = getMacroSet(req.query.macros);
@@ -61,18 +85,21 @@ const getTag = asyncHandler(async (req, res) => {
   const seen = new Set();
   const sizes = [];
 
-  for (const s of COMMON_SLOT_SIZES) {
+  const sizesToBuild = selectedCreative
+    ? [{ width: Number(selectedCreative.width), height: Number(selectedCreative.height), common: false }]
+    : COMMON_SLOT_SIZES.map((size) => ({ ...size, common: true }));
+  for (const s of sizesToBuild) {
     const key = sizeKey(s.width, s.height);
     if (seen.has(key)) continue;
     seen.add(key);
     sizes.push({
-      ...buildDspSnippets(base, tagKey, s.width, s.height, macroSet),
-      eligible_count: eligibleMap.get(key) || 0,
-      common: true,
+      ...buildDspSnippets(base, tagKey, s.width, s.height, macroSet, selectedCreative?.id ?? null),
+      eligible_count: selectedCreative ? 1 : eligibleMap.get(key) || 0,
+      common: s.common,
     });
   }
 
-  for (const row of eligible) {
+  for (const row of selectedCreative ? [] : eligible) {
     if (seen.has(row.size)) continue;
     const parsed = parseOneSize(row.size);
     if (!parsed) continue;
@@ -99,6 +126,20 @@ const getTag = asyncHandler(async (req, res) => {
         tag_key: tagKey,
         status: advertiser.status,
       },
+      creative: selectedCreative
+        ? {
+            id: String(selectedCreative.id),
+            name: selectedCreative.name,
+            status: selectedCreative.status,
+            width: Number(selectedCreative.width),
+            height: Number(selectedCreative.height),
+            campaign: {
+              id: String(selectedCreative.campaign.id),
+              name: selectedCreative.campaign.name,
+              status: selectedCreative.campaign.status,
+            },
+          }
+        : null,
       standard: 'third-party-display',
       macros: {
         active: serializeMacroSet(macroSet),

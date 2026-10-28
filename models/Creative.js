@@ -80,6 +80,7 @@ module.exports = (sequelize, DataTypes) => {
     });
     Creative.hasMany(models.Event, { foreignKey: 'creative_id', as: 'events' });
     Creative.hasMany(models.EventAggregate, { foreignKey: 'creative_id', as: 'eventAggregates' });
+    Creative.hasMany(models.BillingRateHistory, { foreignKey: 'creative_id', as: 'billingRateHistory' });
   };
 
   return Creative;

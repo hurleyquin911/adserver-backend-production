@@ -8,11 +8,11 @@ const P = require('../constant/permissions');
 const router = express.Router();
 router.use(authenticate);
 
-// GET tetap untuk form campaign (Admin/Users hanya melihat brand mereka).
+// GET tetap mengikuti scope role; Admin/Superadmin melihat semua Brand.
 router.get('/', requirePermission(P.CAMPAIGN_READ), controller.list);
 router.get('/:id', requirePermission(P.CAMPAIGN_READ), controller.getOne);
-// Kelola Brand hanya Superadmin.
-router.post('/', requireSuperadmin, requirePermission(P.CAMPAIGN_WRITE), controller.create);
+// Admin dapat membuat Brand; perubahan dan penghapusan tetap khusus Superadmin.
+router.post('/', requirePermission(P.CAMPAIGN_WRITE), controller.create);
 router.patch('/:id', requireSuperadmin, requirePermission(P.CAMPAIGN_WRITE), controller.update);
 router.delete('/:id', requireSuperadmin, requirePermission(P.CAMPAIGN_WRITE), controller.remove);
 

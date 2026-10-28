@@ -12,6 +12,8 @@ const { resetEligibleCache } = require('../utils/universalSelect');
 const { rangeStart, rangeEnd } = require('../utils/reportTz');
 const { defaultFromTo, emptyTotals, addRow, withRates } = require('../utils/reportMetrics');
 const { isSuperadminName } = require('../constant/roles');
+const { recordRateChange } = require('../utils/billingRateHistory');
+const { hideAdRequests } = require('../utils/reportVisibility');
 
 const httpUrl = z
   .string()
@@ -44,25 +46,43 @@ const cpmUsdField = z.preprocess(
   },
   z.number().finite().min(0).max(999999.9999).nullable().optional()
 );
+const cpmChangeReasonField = z.string().trim().min(5).max(500).optional();
 
-const metaSchema = z.object({
+function requireCpmChangeReason(schema) {
+  return schema.superRefine((body, context) => {
+    if (
+      Object.hasOwn(body, 'cpm_usd') &&
+      (typeof body.cpm_change_reason !== 'string' || body.cpm_change_reason.length < 5)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['cpm_change_reason'],
+        message: 'Jelaskan ketentuan perubahan harga (minimal 5 karakter)',
+      });
+    }
+  });
+}
+
+const metaSchema = requireCpmChangeReason(z.object({
   campaign_id: z.coerce.number().int().positive(),
   name: z.string().min(1).max(255),
   width: z.coerce.number().int().positive(),
   height: z.coerce.number().int().positive(),
   click_url: clickUrlField,
   cpm_usd: cpmUsdField,
+  cpm_change_reason: cpmChangeReasonField,
   status: z.enum(['draft', 'active', 'paused']).default('draft'),
-});
+}));
 
-const updateSchema = z.object({
+const updateSchema = requireCpmChangeReason(z.object({
   name: z.string().min(1).max(255).optional(),
   width: z.coerce.number().int().positive().optional(),
   height: z.coerce.number().int().positive().optional(),
   click_url: clickUrlField,
   cpm_usd: cpmUsdField,
+  cpm_change_reason: cpmChangeReasonField,
   status: z.enum(['draft', 'active', 'paused']).optional(),
-});
+}));
 
 function assertCpmWriteAccess(body, user) {
   if (Object.hasOwn(body, 'cpm_usd') && !isSuperadminName(user?.role?.name)) {
@@ -165,10 +185,14 @@ const list = asyncHandler(async (req, res) => {
 
   res.json({
     data: await Promise.all(rows.map(async (r) => {
+      const metrics = hideAdRequests(
+        withRates(byCreative.get(Number(r.id)) || emptyTotals()),
+        req.user
+      );
       const base = serialize(
         r,
         storage,
-        withRates(byCreative.get(Number(r.id)) || emptyTotals()),
+        metrics,
         deliveredMap.get(Number(r.id)) || 0
       );
       const previewPath = path.posix.join(String(r.base_path), r.entry_file || 'index.html');
@@ -238,20 +262,21 @@ const upload = asyncHandler(async (req, res) => {
   const body = metaSchema.parse(req.body);
   assertCpmWriteAccess(body, req.user);
   body.click_url = normalizeClickUrl(body.click_url);
+  const { cpm_change_reason: cpmChangeReason, ...creativeFields } = body;
   await getCampaignScoped(body.campaign_id, req.user);
 
   const { files, totalSize, entryFile } = extractAndValidateZip(req.file.buffer);
   const creative = await db.Creative.create({
-    campaign_id: body.campaign_id,
-    name: body.name,
-    width: body.width,
-    height: body.height,
+    campaign_id: creativeFields.campaign_id,
+    name: creativeFields.name,
+    width: creativeFields.width,
+    height: creativeFields.height,
     storage_driver: env.STORAGE_DRIVER,
     base_path: 'pending',
     entry_file: entryFile,
-    click_url: body.click_url,
-    cpm_usd: body.cpm_usd ?? null,
-    status: body.status,
+    click_url: creativeFields.click_url,
+    cpm_usd: creativeFields.cpm_usd ?? null,
+    status: creativeFields.status,
     file_size: totalSize,
   });
 
@@ -263,6 +288,15 @@ const upload = asyncHandler(async (req, res) => {
   }
   creative.base_path = basePath;
   await creative.save();
+  if (creative.cpm_usd != null) {
+    await recordRateChange({
+      creativeId: creative.id,
+      oldRate: null,
+      newRate: creative.cpm_usd,
+      changedBy: req.user.id,
+      reason: cpmChangeReason,
+    });
+  }
 
   const full = await db.Creative.findByPk(creative.id, {
     include: [{ model: db.Campaign, as: 'campaign' }],
@@ -277,6 +311,7 @@ const update = asyncHandler(async (req, res) => {
   if (Object.prototype.hasOwnProperty.call(body, 'click_url')) {
     body.click_url = normalizeClickUrl(body.click_url);
   }
+  const { cpm_change_reason: cpmChangeReason, ...creativeFields } = body;
   const row = await db.Creative.findByPk(req.params.id, {
     include: [{ model: db.Campaign, as: 'campaign' }],
   });
@@ -303,8 +338,23 @@ const update = asyncHandler(async (req, res) => {
     row.storage_driver = env.STORAGE_DRIVER;
   }
 
-  Object.assign(row, body);
-  await row.save();
+  if (Object.hasOwn(creativeFields, 'cpm_usd')) {
+    await db.sequelize.transaction(async (transaction) => {
+      const oldRate = row.cpm_usd;
+      await row.update(creativeFields, { transaction });
+      await recordRateChange({
+        creativeId: row.id,
+        oldRate,
+        newRate: row.cpm_usd,
+        changedBy: req.user.id,
+        reason: cpmChangeReason,
+        transaction,
+      });
+    });
+  } else {
+    Object.assign(row, creativeFields);
+    await row.save();
+  }
   resetEligibleCache();
   res.json({ data: serialize(row, storage) });
 });

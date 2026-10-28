@@ -229,11 +229,12 @@ function recordServeEvent(req, { type, serveId, publisher, creative, size, pageP
  * Mode DSP/SSP (sz wajib): document.write iframe — pola third-party klasik.
  * Tidak memakai fetch/DOM async agar lolos preview & scanner DSP.
  */
-function dspTagSource({ tagKey, width, height, ord, click }) {
+function dspTagSource({ tagKey, width, height, ord, click, creativeId }) {
   const base = env.PUBLIC_BASE_URL;
   const frameQs =
     `a=${encodeURIComponent(tagKey)}` +
     `&sz=${width}x${height}` +
+    (creativeId != null ? `&cid=${encodeURIComponent(creativeId)}` : '') +
     `&ord=${encodeURIComponent(ord || '')}` +
     (click ? `&click=${encodeURIComponent(click)}` : '');
   return `(function(){
@@ -409,7 +410,12 @@ async function resolveUniversalFill(req, { sizeRaw, returnMode = 'json' } = {}) 
     return { empty: true, packed: null };
   }
 
-  const creative = await pickUniversal({ sizes: parsed.sizes, advertiserId });
+  const rawCreativeId = req.query.cid;
+  const creativeId = rawCreativeId == null ? null : Number(rawCreativeId);
+  if (rawCreativeId != null && (!Number.isSafeInteger(creativeId) || creativeId < 1)) {
+    throw new AppError('VALIDATION_ERROR', 'cid tidak valid', 400);
+  }
+  const creative = await pickUniversal({ sizes: parsed.sizes, advertiserId, creativeId });
   const serveId = createServeId();
 
   if (!creative) {
@@ -562,6 +568,7 @@ fetch(${JSON.stringify(base)}+'/ad/serve?p='+encodeURIComponent(p),{credentials:
         height: dspSize.height,
         ord: cachebusterFromQuery(req.query),
         click: dspClickFromQuery(req.query),
+        creativeId: req.query.cid,
       })
     );
     return;

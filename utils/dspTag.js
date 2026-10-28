@@ -234,7 +234,7 @@ function pickClickMacro(macros, useEncodedClick) {
   return macros.click || macros.clickEnc;
 }
 
-function buildDspScriptSrc(base, { tagKey, width, height, macros, useEncodedClick }) {
+function buildDspScriptSrc(base, { tagKey, width, height, macros, creativeId, useEncodedClick }) {
   const sz = sizeKey(width, height);
   const encoded =
     useEncodedClick != null ? useEncodedClick : macros.preferEncoded !== false;
@@ -242,12 +242,13 @@ function buildDspScriptSrc(base, { tagKey, width, height, macros, useEncodedClic
   return (
     `${base}/ad/tag.js?a=${encodeURIComponent(tagKey)}` +
     `&sz=${sz}` +
+    (creativeId != null ? `&cid=${encodeURIComponent(creativeId)}` : '') +
     `&ord=${macros.cachebuster}` +
     `&click=${clickMacro}`
   );
 }
 
-function buildDspFrameSrc(base, { tagKey, width, height, macros, useEncodedClick }) {
+function buildDspFrameSrc(base, { tagKey, width, height, macros, creativeId, useEncodedClick }) {
   const sz = sizeKey(width, height);
   const encoded =
     useEncodedClick != null ? useEncodedClick : macros.preferEncoded !== false;
@@ -255,12 +256,13 @@ function buildDspFrameSrc(base, { tagKey, width, height, macros, useEncodedClick
   return (
     `${base}/ad/frame?a=${encodeURIComponent(tagKey)}` +
     `&sz=${sz}` +
+    (creativeId != null ? `&cid=${encodeURIComponent(creativeId)}` : '') +
     `&ord=${macros.cachebuster}` +
     `&click=${clickMacro}`
   );
 }
 
-function buildDspSnippets(base, tagKey, width, height, macroSet = MACRO_SETS.dv360) {
+function buildDspSnippets(base, tagKey, width, height, macroSet = MACRO_SETS.dv360, creativeId = null) {
   const set = typeof macroSet === 'string' ? getMacroSet(macroSet) : macroSet;
   const sz = sizeKey(width, height);
   const scriptSrc = buildDspScriptSrc(base, {
@@ -268,12 +270,14 @@ function buildDspSnippets(base, tagKey, width, height, macroSet = MACRO_SETS.dv3
     width,
     height,
     macros: set,
+    creativeId,
   });
   const frameSrc = buildDspFrameSrc(base, {
     tagKey,
     width,
     height,
     macros: set,
+    creativeId,
   });
 
   const script = `<script type="text/javascript" src="${scriptSrc}"></script>`;

@@ -15,9 +15,22 @@ const P = require('../constant/permissions');
 let adminToken;
 
 async function loginAdmin() {
+  const role = await db.Role.findOne({ where: { name: 'Admin' } });
+  if (!role) throw new Error('Role Admin is required for universal-tag tests');
+  const email = `universal-admin-${Date.now()}@adserver.local`;
+  const password = 'TestPass123!';
+  await db.User.create({
+    email,
+    name: 'Universal Tag Admin',
+    password_hash: await bcrypt.hash(password, 10),
+    role_id: role.id,
+    advertiser_id: null,
+    is_active: true,
+  });
   const login = await request(app)
     .post('/auth/login')
-    .send({ email: process.env.SEED_ADMIN_EMAIL, password: process.env.SEED_ADMIN_PASSWORD });
+    .send({ email, password });
+  if (!login.body.accessToken) throw new Error('Unable to authenticate universal-tag test Admin');
   return login.body.accessToken;
 }
 
@@ -357,6 +370,41 @@ describe('Pemilihan goal', () => {
 });
 
 describe('Tag.js per brand & token', () => {
+  test('creative-specific tag keeps the selected creative through serving', async () => {
+    const setup = await setupCreative();
+    const zipBuf = makeZip({ 'index.html': '<html><body>second</body></html>' });
+    const second = await request(app)
+      .post('/api/creatives')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .field('campaign_id', String(setup.campaignId))
+      .field('name', 'Second eligible creative')
+      .field('width', '300')
+      .field('height', '250')
+      .field('click_url', 'https://example.com/second')
+      .field('status', 'active')
+      .attach('file', zipBuf, 'second.zip');
+    expect(second.status).toBe(201);
+    const secondCreativeId = Number(second.body.data.id);
+    expect(secondCreativeId).not.toBe(setup.creativeId);
+    resetEligibleCache();
+
+    const tag = await request(app)
+      .get(`/api/tag?creative_id=${setup.creativeId}&macros=dv360`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(tag.status).toBe(200);
+    expect(tag.body.data.creative.id).toBe(String(setup.creativeId));
+    expect(tag.body.data.sizes[0].script).toContain(`&cid=${setup.creativeId}`);
+    expect(tag.body.data.sizes[0].iframe).toContain(`&cid=${setup.creativeId}`);
+
+    const served = await request(app)
+      .get(servePath(setup.tagKey, '300x250', `&cid=${setup.creativeId}`))
+      .set('Origin', `https://creative-specific-${Date.now()}.example`);
+    expect(served.status).toBe(200);
+    const payload = verifyTrackingToken(served.body.token);
+    expect(Number(payload.cid)).toBe(setup.creativeId);
+    expect(Number(payload.cid)).not.toBe(secondCreativeId);
+  });
+
   test('GET /ad/tag.js tanpa a -> 400', async () => {
     const res = await request(app).get('/ad/tag.js');
     expect(res.status).toBe(400);
@@ -469,13 +517,13 @@ describe('Agregasi v2 & report', () => {
 
   test('user ber-advertiser_id hanya campaign sendiri; 403 publisher/no-fill', async () => {
     const own = await db.Advertiser.create({ name: `Uni Own ${Date.now()}`, status: 'active' });
-    const adminRole = await db.Role.findOne({ where: { name: 'Admin' } });
+    const usersRole = await db.Role.findOne({ where: { name: 'Users' } });
     const email = `uni-scope-${Date.now()}@adserver.local`;
     await db.User.create({
       email,
       name: 'Uni Scoped',
       password_hash: await bcrypt.hash('TestPass123!', 10),
-      role_id: adminRole.id,
+      role_id: usersRole.id,
       advertiser_id: own.id,
       is_active: true,
     });

@@ -3,7 +3,7 @@ const { Op, fn, col } = require('sequelize');
 const db = require('../models');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
-const { campaignScopeInclude, assertAdvertiserAccess, mergeWhere } = require('../utils/scope');
+const { campaignScopeInclude, assertAdvertiserAccess, mergeWhere, isUnscoped } = require('../utils/scope');
 const { resetEligibleCache } = require('../utils/universalSelect');
 
 const schema = z
@@ -102,7 +102,7 @@ const create = asyncHandler(async (req, res) => {
   if (!assertAdvertiserAccess(req.user, body.advertiser_id)) {
     throw new AppError('FORBIDDEN', 'Akses ditolak', 403);
   }
-  if (req.user.advertiser_id != null) {
+  if (!isUnscoped(req.user) && req.user.advertiser_id != null) {
     body.advertiser_id = Number(req.user.advertiser_id);
   }
   const adv = await db.Advertiser.findByPk(body.advertiser_id);
@@ -124,7 +124,7 @@ const update = asyncHandler(async (req, res) => {
   if (body.advertiser_id != null && !assertAdvertiserAccess(req.user, body.advertiser_id)) {
     throw new AppError('FORBIDDEN', 'Akses ditolak', 403);
   }
-  if (req.user.advertiser_id != null) delete body.advertiser_id;
+  if (!isUnscoped(req.user) && req.user.advertiser_id != null) delete body.advertiser_id;
   const next = { ...row.toJSON(), ...body };
   if (next.end_date < next.start_date) {
     throw new AppError('VALIDATION_ERROR', 'end_date harus >= start_date', 400);

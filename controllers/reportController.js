@@ -9,6 +9,8 @@ const { mysqlOffset, nodeOffset, rangeStart, rangeEnd, formatInTz } = require('.
 const { assertAdvertiserAccess, isUnscoped } = require('../utils/scope');
 const { defaultFromTo, emptyTotals, addRow, withRates, legacySummary } = require('../utils/reportMetrics');
 const { paceStatus } = require('../utils/pacing');
+const { isSuperadminName } = require('../constant/roles');
+const { hideAdRequests, visibleEventRows } = require('../utils/reportVisibility');
 
 const filterSchema = z.object({
   from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -154,7 +156,7 @@ const byDay = asyncHandler(async (req, res) => {
     order: [[dayExpr, 'ASC']],
     raw: true,
   });
-  res.json({ data: rows });
+  res.json({ data: visibleEventRows(rows, req.user) });
 });
 
 const byDevice = asyncHandler(async (req, res) => {
@@ -169,7 +171,7 @@ const byDevice = asyncHandler(async (req, res) => {
     group: [literal("COALESCE(NULLIF(device_type, ''), 'unknown')"), 'type'],
     raw: true,
   });
-  res.json({ data: rows });
+  res.json({ data: visibleEventRows(rows, req.user) });
 });
 
 const exportCsv = asyncHandler(async (req, res) => {
@@ -180,7 +182,7 @@ const exportCsv = asyncHandler(async (req, res) => {
     raw: true,
   });
   const header = 'bucket_at,campaign_id,creative_id,placement_id,publisher_id,device_type,slot_size,type,interaction_name,count\n';
-  const body = rows
+  const body = visibleEventRows(rows, req.user)
     .map(
       (r) =>
         `${formatInTz(r.bucket_at)},${r.campaign_id},${r.creative_id},${r.placement_id},${r.publisher_id},${r.device_type},${r.slot_size},${r.type},${r.interaction_name},${r.count}`
@@ -276,7 +278,7 @@ const campaignsReport = asyncHandler(async (req, res) => {
         endDate: c.end_date,
         now,
       }),
-      metrics,
+      metrics: hideAdRequests(metrics, req.user),
     };
   });
   res.json({ data, meta: { from, to } });
@@ -337,7 +339,7 @@ const creativesReport = asyncHandler(async (req, res) => {
           }
         : null,
       delivered,
-      metrics,
+      metrics: hideAdRequests(metrics, req.user),
     };
   });
   res.json({ data, meta: { from, to } });
@@ -382,7 +384,7 @@ const campaignSummary = asyncHandler(async (req, res) => {
         startDate: camp.start_date,
         endDate: camp.end_date,
       }),
-      metrics,
+      metrics: hideAdRequests(metrics, req.user),
     },
   });
 });
@@ -422,7 +424,7 @@ const campaignTimeseries = asyncHandler(async (req, res) => {
       total: Number(r.total) || 0,
     }));
   }
-  res.json({ data: rows, meta: { from, to, granularity } });
+  res.json({ data: visibleEventRows(rows, req.user), meta: { from, to, granularity } });
 });
 
 const BREAKDOWN_FIELDS = {
@@ -475,7 +477,7 @@ const campaignBreakdown = asyncHandler(async (req, res) => {
   const data = [...grouped.values()].map((row) => ({
     key: row.key,
     label: labels.get(row.key) || (row.key === '0' || row.key === '' ? '(tidak ada)' : row.key),
-    metrics: withRates(row),
+    metrics: hideAdRequests(withRates(row), req.user),
   }));
   res.json({ data, meta: { from, to, by } });
 });
@@ -500,12 +502,26 @@ const campaignExport = asyncHandler(async (req, res) => {
     if (!grouped.has(key)) grouped.set(key, { key, ...emptyTotals() });
     addRow(grouped.get(key), r.type, r.total);
   }
-  const header = 'key,request,no_fill,impression,viewable_impression,click,interaction,interaction_unique,ctr,viewability_rate,interaction_rate\n';
+  const includeRequest = isSuperadminName(req.user?.role?.name);
+  const columns = [
+    'key',
+    ...(includeRequest ? ['request'] : []),
+    'no_fill',
+    'impression',
+    'viewable_impression',
+    'click',
+    'interaction',
+    'interaction_unique',
+    'ctr',
+    'viewability_rate',
+    'interaction_rate',
+  ];
+  const header = `${columns.join(',')}\n`;
   const lines = [...grouped.values()].map((row) => {
     const m = withRates(row);
-    return [
+    const values = [
       row.key,
-      m.request,
+      ...(includeRequest ? [m.request] : []),
       m.no_fill,
       m.impression,
       m.viewable_impression,
@@ -515,7 +531,8 @@ const campaignExport = asyncHandler(async (req, res) => {
       m.ctr,
       m.viewability_rate,
       m.interaction_rate,
-    ].join(',');
+    ];
+    return values.join(',');
   });
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="campaign-${req.params.id}.csv"`);

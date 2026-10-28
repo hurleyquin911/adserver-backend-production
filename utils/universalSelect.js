@@ -59,6 +59,7 @@ function pickCreativeFromCampaign(creatives, rng) {
 async function pickUniversal({
   sizes,
   advertiserId = null,
+  creativeId = null,
   rng = Math.random,
   now = new Date(),
 } = {}) {
@@ -68,6 +69,7 @@ async function pickUniversal({
   const all = await loadEligible(now);
   const matching = all.filter((c) => {
     if (!sizeSet.has(sizeKey(c.width, c.height))) return false;
+    if (creativeId != null && Number(c.id) !== Number(creativeId)) return false;
     if (advertiserId != null && Number(c.campaign?.advertiser_id) !== Number(advertiserId)) {
       return false;
     }

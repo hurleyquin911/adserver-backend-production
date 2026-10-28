@@ -3,6 +3,7 @@ const rateLimit = require('express-rate-limit');
 const controller = require('../controllers/reportController');
 const authenticate = require('../middleware/authenticate');
 const requirePermission = require('../middleware/requirePermission');
+const requireSuperadmin = require('../middleware/requireSuperadmin');
 const P = require('../constant/permissions');
 
 const router = express.Router();
@@ -34,8 +35,8 @@ router.get('/campaigns/:id/summary', requirePermission(P.REPORT_READ), controlle
 router.get('/campaigns/:id/timeseries', requirePermission(P.REPORT_READ), controller.campaignTimeseries);
 router.get('/campaigns/:id/breakdown', requirePermission(P.REPORT_READ), controller.campaignBreakdown);
 router.get('/campaigns/:id/export.csv', requirePermission(P.REPORT_READ), controller.campaignExport);
-router.get('/publishers', requirePermission(P.REPORT_READ), controller.publishersReport);
-router.get('/publishers/:id', requirePermission(P.REPORT_READ), controller.publisherDetailReport);
-router.get('/no-fill', requirePermission(P.REPORT_READ), controller.noFillReport);
+router.get('/publishers', requirePermission(P.REPORT_READ), requireSuperadmin, controller.publishersReport);
+router.get('/publishers/:id', requirePermission(P.REPORT_READ), requireSuperadmin, controller.publisherDetailReport);
+router.get('/no-fill', requirePermission(P.REPORT_READ), requireSuperadmin, controller.noFillReport);
 
 module.exports = router;

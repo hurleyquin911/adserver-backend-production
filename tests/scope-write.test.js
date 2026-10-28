@@ -5,6 +5,7 @@ const db = require('../models');
 const { makeZip } = require('./helpers');
 
 let adminToken;
+let crossBrandAdminToken;
 let scopedToken;
 let ownAdvertiserId;
 let otherAdvertiserId;
@@ -19,8 +20,18 @@ beforeAll(async () => {
   otherAdvertiserId = other.id;
 
   const usersRole = await db.Role.findOne({ where: { name: 'Users' } });
+  const adminRole = await db.Role.findOne({ where: { name: 'Admin' } });
   const hash = await bcrypt.hash('TestPass123!', 10);
   const email = `scope-write-${Date.now()}@adserver.local`;
+  const adminEmail = `scope-admin-${Date.now()}@adserver.local`;
+  await db.User.create({
+    email: adminEmail,
+    name: 'Cross Brand Admin',
+    password_hash: hash,
+    role_id: adminRole.id,
+    advertiser_id: ownAdvertiserId,
+    is_active: true,
+  });
   await db.User.create({
     email,
     name: 'Scoped Writer',
@@ -30,10 +41,11 @@ beforeAll(async () => {
     is_active: true,
   });
 
-  const adminLogin = await request(app)
+  const crossBrandAdminLogin = await request(app)
     .post('/auth/login')
-    .send({ email: process.env.SEED_ADMIN_EMAIL, password: process.env.SEED_ADMIN_PASSWORD });
-  adminToken = adminLogin.body.accessToken;
+    .send({ email: adminEmail, password: 'TestPass123!' });
+  crossBrandAdminToken = crossBrandAdminLogin.body.accessToken;
+  adminToken = crossBrandAdminToken;
 
   const scopedLogin = await request(app)
     .post('/auth/login')
@@ -87,6 +99,45 @@ beforeAll(async () => {
 
 
 describe('Scope tulis advertiser', () => {
+  test('Admin dapat melihat Brand lintas akun dan membuat Brand', async () => {
+    const list = await request(app)
+      .get('/api/advertisers')
+      .set('Authorization', `Bearer ${crossBrandAdminToken}`);
+    expect(list.status).toBe(200);
+    expect(list.body.data.map((brand) => String(brand.id))).toEqual(
+      expect.arrayContaining([String(ownAdvertiserId), String(otherAdvertiserId)])
+    );
+
+    const created = await request(app)
+      .post('/api/advertisers')
+      .set('Authorization', `Bearer ${crossBrandAdminToken}`)
+      .send({ name: 'Admin Created Brand', status: 'active' });
+    expect(created.status).toBe(201);
+    expect(created.body.data.name).toBe('Admin Created Brand');
+
+    const edit = await request(app)
+      .patch(`/api/advertisers/${otherAdvertiserId}`)
+      .set('Authorization', `Bearer ${crossBrandAdminToken}`)
+      .send({ name: 'Admin Cannot Edit Brand' });
+    expect(edit.status).toBe(403);
+  });
+
+  test('Admin dapat membuat campaign di Brand lain', async () => {
+    const today = new Date();
+    const res = await request(app)
+      .post('/api/campaigns')
+      .set('Authorization', `Bearer ${crossBrandAdminToken}`)
+      .send({
+        advertiser_id: Number(otherAdvertiserId),
+        name: 'Cross Brand Admin Campaign',
+        start_date: today.toISOString().slice(0, 10),
+        end_date: today.toISOString().slice(0, 10),
+        status: 'draft',
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.data.advertiser_id).toBe(String(otherAdvertiserId));
+  });
+
   test('user ber-advertiser_id tidak bisa membuat campaign milik advertiser lain', async () => {
     const today = new Date();
     const res = await request(app)
@@ -135,7 +186,7 @@ describe('Scope tulis advertiser', () => {
     expect(res.body.error.code).toBe('FORBIDDEN');
   });
 
-  test('user scoped boleh menulis campaign miliknya', async () => {
+  test('user scoped tanpa permission campaign:write tidak dapat membuat campaign', async () => {
     const today = new Date();
     const res = await request(app)
       .post('/api/campaigns')
@@ -147,7 +198,17 @@ describe('Scope tulis advertiser', () => {
         end_date: today.toISOString().slice(0, 10),
         status: 'draft',
       });
-    expect(res.status).toBe(201);
-    expect(res.body.data.advertiser_id).toBe(String(ownAdvertiserId));
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('FORBIDDEN');
+  });
+
+  test('user hanya melihat Brand akunnya sendiri', async () => {
+    const res = await request(app)
+      .get('/api/advertisers')
+      .set('Authorization', `Bearer ${scopedToken}`);
+    expect(res.status).toBe(200);
+    const ids = res.body.data.map((brand) => String(brand.id));
+    expect(ids).toContain(String(ownAdvertiserId));
+    expect(ids).not.toContain(String(otherAdvertiserId));
   });
 });

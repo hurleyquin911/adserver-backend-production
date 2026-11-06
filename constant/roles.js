@@ -7,6 +7,10 @@ const ROLE = {
 
 const SYSTEM_ROLE_NAMES = [ROLE.SUPERADMIN, ROLE.ADMIN, ROLE.USERS];
 
+/** Users hanya melihat data Brand-nya. Tidak membuat atau mengubah apa pun. */
+const USERS_ROLE_DESCRIPTION =
+  'Hanya melihat campaign, creative, dan report untuk Brand-nya';
+
 /** Nama lama (seeder sebelumnya) → nama baru. */
 const LEGACY_ROLE_ALIASES = {
   'Super Admin': ROLE.SUPERADMIN,
@@ -35,6 +39,7 @@ function isUsersName(name) {
 module.exports = {
   ROLE,
   SYSTEM_ROLE_NAMES,
+  USERS_ROLE_DESCRIPTION,
   LEGACY_ROLE_ALIASES,
   normalizeRoleName,
   isSuperadminName,

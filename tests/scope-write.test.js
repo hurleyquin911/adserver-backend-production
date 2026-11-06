@@ -154,7 +154,7 @@ describe('Scope tulis advertiser', () => {
     expect(res.body.error.code).toBe('FORBIDDEN');
   });
 
-  test('POST /api/creatives menolak campaign_id advertiser lain', async () => {
+  test('Users tidak dapat mengunggah creative', async () => {
     const zipBuf = makeZip({ 'index.html': '<html><body>nope</body></html>' });
     const res = await request(app)
       .post('/api/creatives')
@@ -165,8 +165,8 @@ describe('Scope tulis advertiser', () => {
       .field('height', '250')
       .field('click_url', 'https://example.com/hijack')
       .attach('file', zipBuf, 'hijack.zip');
-    expect(res.status).toBe(404);
-    expect(res.body.error.code).toBe('NOT_FOUND');
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('FORBIDDEN');
   });
 
   test('user scoped tidak bisa patch advertiser lain', async () => {
@@ -202,13 +202,17 @@ describe('Scope tulis advertiser', () => {
     expect(res.body.error.code).toBe('FORBIDDEN');
   });
 
-  test('user hanya melihat Brand akunnya sendiri', async () => {
-    const res = await request(app)
+  test('Users tidak dapat mengakses endpoint Advertiser', async () => {
+    const list = await request(app)
       .get('/api/advertisers')
       .set('Authorization', `Bearer ${scopedToken}`);
-    expect(res.status).toBe(200);
-    const ids = res.body.data.map((brand) => String(brand.id));
-    expect(ids).toContain(String(ownAdvertiserId));
-    expect(ids).not.toContain(String(otherAdvertiserId));
+    expect(list.status).toBe(403);
+    expect(list.body.error.code).toBe('FORBIDDEN');
+
+    const own = await request(app)
+      .get(`/api/advertisers/${ownAdvertiserId}`)
+      .set('Authorization', `Bearer ${scopedToken}`);
+    expect(own.status).toBe(403);
+    expect(own.body.error.code).toBe('FORBIDDEN');
   });
 });

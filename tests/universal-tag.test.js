@@ -544,7 +544,12 @@ describe('Agregasi v2 & report', () => {
       .get('/api/reports/no-fill')
       .set('Authorization', `Bearer ${token}`);
     expect(nf.status).toBe(403);
-    expect(login.body.user.permissions).toContain(P.PUBLISHER_MANAGE);
+    expect(login.body.user.permissions).toEqual(
+      expect.arrayContaining([P.CAMPAIGN_READ, P.REPORT_READ])
+    );
+    expect(login.body.user.permissions).not.toContain(P.PUBLISHER_MANAGE);
+    expect(login.body.user.permissions).not.toContain(P.CREATIVE_UPLOAD);
+    expect(login.body.user.permissions).not.toContain(P.CAMPAIGN_WRITE);
   });
 });
 

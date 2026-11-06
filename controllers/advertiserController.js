@@ -4,6 +4,7 @@ const db = require('../models');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const { advertiserScopeWhere, assertAdvertiserAccess } = require('../utils/scope');
+const { assertNotUsers, USERS_ADVERTISER_MESSAGE } = require('../utils/usersAccess');
 const { cascadeDeleteAdvertiser } = require('../utils/cascadeDelete');
 const { resetEligibleCache } = require('../utils/universalSelect');
 const { generateTagKey } = require('../utils/tagKey');
@@ -70,6 +71,7 @@ async function campaignCountMap(ids) {
 }
 
 const list = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user, USERS_ADVERTISER_MESSAGE);
   const where = advertiserScopeWhere(req.user, 'id');
   const rows = await db.Advertiser.findAll({ where, order: [['id', 'DESC']] });
   const counts = await campaignCountMap(rows.map((row) => row.id));
@@ -77,6 +79,7 @@ const list = asyncHandler(async (req, res) => {
 });
 
 const getOne = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user, USERS_ADVERTISER_MESSAGE);
   const row = await db.Advertiser.findByPk(req.params.id);
   if (!row || !assertAdvertiserAccess(req.user, row.id)) {
     throw new AppError('NOT_FOUND', 'Brand tidak ditemukan', 404);
@@ -86,6 +89,7 @@ const getOne = asyncHandler(async (req, res) => {
 });
 
 const create = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user, USERS_ADVERTISER_MESSAGE);
   const body = schema.parse(req.body);
   let tagKey = generateTagKey();
   for (let i = 0; i < 5; i += 1) {
@@ -98,6 +102,7 @@ const create = asyncHandler(async (req, res) => {
 });
 
 const update = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user, USERS_ADVERTISER_MESSAGE);
   const body = schema.partial().parse(req.body);
   const row = await db.Advertiser.findByPk(req.params.id);
   if (!row) throw new AppError('NOT_FOUND', 'Brand tidak ditemukan', 404);
@@ -109,6 +114,7 @@ const update = asyncHandler(async (req, res) => {
 });
 
 const remove = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user, USERS_ADVERTISER_MESSAGE);
   const row = await db.Advertiser.findByPk(req.params.id);
   if (!row) throw new AppError('NOT_FOUND', 'Brand tidak ditemukan', 404);
   await cascadeDeleteAdvertiser(row.id);

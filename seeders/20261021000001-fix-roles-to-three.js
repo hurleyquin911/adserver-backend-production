@@ -1,8 +1,12 @@
 'use strict';
 
+const { USERS_READ_PERMISSIONS } = require('../constant/permissions');
+const { USERS_ROLE_DESCRIPTION } = require('../constant/roles');
+
 /**
  * Migrasi data existing → 3 role: Superadmin, Admin, Users.
- * Idempotent. Tidak mengubah permission codes.
+ * Idempotent. Role Users hanya membaca.
+ * Daftar kode Superadmin dan Admin di seeder ini tidak diubah.
  */
 
 async function ensureRole(queryInterface, sequelize, { name, description, now }) {
@@ -63,7 +67,7 @@ module.exports = {
     });
     const usersId = await ensureRole(queryInterface, sequelize, {
       name: 'Users',
-      description: 'Melihat campaign dan mengelola creative serta report untuk Brand-nya',
+      description: USERS_ROLE_DESCRIPTION,
       now,
     });
 
@@ -102,7 +106,7 @@ module.exports = {
       'report:read',
       'report:aggregate',
     ];
-    const usersCodes = ['campaign:read', 'creative:upload', 'report:read'];
+    const usersCodes = USERS_READ_PERMISSIONS;
 
     await setRolePermissions(queryInterface, sequelize, superId, superCodes);
     await setRolePermissions(queryInterface, sequelize, adminId, adminCodes);
@@ -114,6 +118,16 @@ module.exports = {
         replacements: {
           id: adminId,
           d: 'Operasional Brand yang diikat: campaign, creative, dan report',
+          now,
+        },
+      }
+    );
+    await sequelize.query(
+      `UPDATE roles SET description = :d, updated_at = :now WHERE id = :id`,
+      {
+        replacements: {
+          id: usersId,
+          d: USERS_ROLE_DESCRIPTION,
           now,
         },
       }

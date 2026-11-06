@@ -2,6 +2,7 @@ const { z } = require('zod');
 const db = require('../models');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
+const { assertNotUsers } = require('../utils/usersAccess');
 const {
   isValidDomainPattern,
   normalizeDomainPattern,
@@ -51,6 +52,7 @@ const getOne = asyncHandler(async (req, res) => {
 });
 
 const create = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user);
   const body = schema.parse(req.body);
   if (body.allowed_domains == null) body.allowed_domains = [];
   const row = await db.Site.create(body);
@@ -58,6 +60,7 @@ const create = asyncHandler(async (req, res) => {
 });
 
 const update = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user);
   const body = schema.partial().parse(req.body);
   const row = await db.Site.findByPk(req.params.id);
   if (!row) throw new AppError('NOT_FOUND', 'Site tidak ditemukan', 404);
@@ -67,6 +70,7 @@ const update = asyncHandler(async (req, res) => {
 });
 
 const remove = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user);
   const row = await db.Site.findByPk(req.params.id);
   if (!row) throw new AppError('NOT_FOUND', 'Site tidak ditemukan', 404);
   // placements.site_id = RESTRICT - hapus child dulu (creative_placements CASCADE, events SET NULL)

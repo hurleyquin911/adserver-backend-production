@@ -3,6 +3,7 @@ const db = require('../models');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const { SYSTEM_ROLE_NAMES, isSuperadminName } = require('../constant/roles');
+const { assertNotUsers } = require('../utils/usersAccess');
 
 const upsertSchema = z.object({
   name: z.string().min(1).max(255),
@@ -68,6 +69,7 @@ const create = asyncHandler(async (_req, res) => {
 });
 
 const update = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user);
   if (!isSuperadminName(req.user.role?.name)) {
     throw new AppError('FORBIDDEN', 'Hanya Superadmin yang dapat mengubah role', 403);
   }

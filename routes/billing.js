@@ -4,10 +4,11 @@ const authenticate = require('../middleware/authenticate');
 const requirePermission = require('../middleware/requirePermission');
 const requireBillingRole = require('../middleware/requireBillingRole');
 const requireSuperadmin = require('../middleware/requireSuperadmin');
+const denyUsersWrite = require('../middleware/denyUsersWrite');
 const P = require('../constant/permissions');
 
 const router = express.Router();
-router.use(authenticate, requirePermission(P.REPORT_READ), requireBillingRole);
+router.use(authenticate, denyUsersWrite, requirePermission(P.REPORT_READ), requireBillingRole);
 
 router.get('/export.csv', controller.exportCsv);
 router.get('/history', controller.history);

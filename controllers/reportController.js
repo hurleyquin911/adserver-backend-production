@@ -11,6 +11,7 @@ const { defaultFromTo, emptyTotals, addRow, withRates, legacySummary } = require
 const { paceStatus } = require('../utils/pacing');
 const { isSuperadminName } = require('../constant/roles');
 const { hideAdRequests, visibleEventRows } = require('../utils/reportVisibility');
+const { assertNotUsers } = require('../utils/usersAccess');
 
 const filterSchema = z.object({
   from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -194,6 +195,7 @@ const exportCsv = asyncHandler(async (req, res) => {
 });
 
 const runAggregate = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user);
   const result = await aggregateEvents({ sinceHours: Number(req.query.hours || 48) });
   res.json(result);
 });

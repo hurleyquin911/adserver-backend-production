@@ -4,10 +4,11 @@ const controller = require('../controllers/reportController');
 const authenticate = require('../middleware/authenticate');
 const requirePermission = require('../middleware/requirePermission');
 const requireSuperadmin = require('../middleware/requireSuperadmin');
+const denyUsersWrite = require('../middleware/denyUsersWrite');
 const P = require('../constant/permissions');
 
 const router = express.Router();
-router.use(authenticate);
+router.use(authenticate, denyUsersWrite);
 
 const aggregateLimiter = rateLimit({
   windowMs: 60 * 1000,

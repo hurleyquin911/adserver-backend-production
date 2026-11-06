@@ -12,6 +12,7 @@ const { resetEligibleCache } = require('../utils/universalSelect');
 const { rangeStart, rangeEnd } = require('../utils/reportTz');
 const { defaultFromTo, emptyTotals, addRow, withRates } = require('../utils/reportMetrics');
 const { isSuperadminName } = require('../constant/roles');
+const { assertNotUsers } = require('../utils/usersAccess');
 const { recordRateChange } = require('../utils/billingRateHistory');
 const { hideAdRequests } = require('../utils/reportVisibility');
 
@@ -258,6 +259,7 @@ const getOne = asyncHandler(async (req, res) => {
 });
 
 const upload = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user);
   if (!req.file) throw new AppError('VALIDATION_ERROR', 'File ZIP wajib diunggah', 400);
   const body = metaSchema.parse(req.body);
   assertCpmWriteAccess(body, req.user);
@@ -306,6 +308,7 @@ const upload = asyncHandler(async (req, res) => {
 });
 
 const update = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user);
   const body = updateSchema.parse(req.body);
   assertCpmWriteAccess(body, req.user);
   if (Object.prototype.hasOwnProperty.call(body, 'click_url')) {
@@ -360,6 +363,7 @@ const update = asyncHandler(async (req, res) => {
 });
 
 const remove = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user);
   const row = await db.Creative.findByPk(req.params.id, {
     include: [{ model: db.Campaign, as: 'campaign' }],
   });

@@ -4,6 +4,7 @@ const db = require('../models');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const { campaignScopeInclude, assertAdvertiserAccess, mergeWhere, isUnscoped } = require('../utils/scope');
+const { assertNotUsers } = require('../utils/usersAccess');
 const { resetEligibleCache } = require('../utils/universalSelect');
 
 const schema = z
@@ -98,6 +99,7 @@ const getOne = asyncHandler(async (req, res) => {
 });
 
 const create = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user);
   const body = schema.parse(req.body);
   if (!assertAdvertiserAccess(req.user, body.advertiser_id)) {
     throw new AppError('FORBIDDEN', 'Akses ditolak', 403);
@@ -116,6 +118,7 @@ const create = asyncHandler(async (req, res) => {
 });
 
 const update = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user);
   const body = schema.partial().parse(req.body);
   const row = await db.Campaign.findByPk(req.params.id);
   if (!row || !assertAdvertiserAccess(req.user, row.advertiser_id)) {
@@ -139,6 +142,7 @@ const update = asyncHandler(async (req, res) => {
 });
 
 const remove = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user);
   const row = await db.Campaign.findByPk(req.params.id);
   if (!row || !assertAdvertiserAccess(req.user, row.advertiser_id)) {
     throw new AppError('NOT_FOUND', 'Campaign tidak ditemukan', 404);

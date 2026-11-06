@@ -3,11 +3,12 @@ const userController = require('../controllers/userController');
 const authenticate = require('../middleware/authenticate');
 const requirePermission = require('../middleware/requirePermission');
 const requireSuperadmin = require('../middleware/requireSuperadmin');
+const denyUsersWrite = require('../middleware/denyUsersWrite');
 const P = require('../constant/permissions');
 
 const router = express.Router();
 
-router.use(authenticate, requireSuperadmin, requirePermission(P.USER_MANAGE));
+router.use(authenticate, denyUsersWrite, requireSuperadmin, requirePermission(P.USER_MANAGE));
 
 router.get('/', userController.list);
 router.get('/:id', userController.getOne);

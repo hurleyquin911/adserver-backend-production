@@ -3,12 +3,14 @@ const controller = require('../controllers/advertiserController');
 const authenticate = require('../middleware/authenticate');
 const requirePermission = require('../middleware/requirePermission');
 const requireSuperadmin = require('../middleware/requireSuperadmin');
+const denyUsers = require('../middleware/denyUsers');
 const P = require('../constant/permissions');
 
 const router = express.Router();
 router.use(authenticate);
+// Users tidak boleh membaca maupun mengubah Brand. Admin/Superadmin tetap lewat permission.
+router.use(denyUsers);
 
-// GET tetap mengikuti scope role; Admin/Superadmin melihat semua Brand.
 router.get('/', requirePermission(P.CAMPAIGN_READ), controller.list);
 router.get('/:id', requirePermission(P.CAMPAIGN_READ), controller.getOne);
 // Admin dapat membuat Brand; perubahan dan penghapusan tetap khusus Superadmin.

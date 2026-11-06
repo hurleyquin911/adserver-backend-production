@@ -1,10 +1,18 @@
 'use strict';
 
+const { USERS_READ_PERMISSIONS } = require('../constant/permissions');
+const { USERS_ROLE_DESCRIPTION } = require('../constant/roles');
+
 /**
  * Fresh install: 3 role tetap - Superadmin, Admin, Users.
  * Idempotent: aman meski migration sudah menyisipkan permission lain
  * (report:aggregate, publisher:manage) dengan id auto-increment.
+ * Role Users hanya membaca.
  */
+
+function readPermissionSql(sequelize) {
+  return USERS_READ_PERMISSIONS.map((code) => sequelize.escape(code)).join(', ');
+}
 
 async function ensurePermission(queryInterface, sequelize, { code, description }) {
   const [rows] = await sequelize.query(
@@ -83,9 +91,13 @@ module.exports = {
     });
     const usersId = await ensureRole(queryInterface, sequelize, {
       name: 'Users',
-      description: 'Melihat campaign dan mengelola creative serta report untuk Brand-nya',
+      description: USERS_ROLE_DESCRIPTION,
       now,
     });
+    await sequelize.query(
+      `UPDATE roles SET description = :description, updated_at = :now WHERE id = :id`,
+      { replacements: { id: usersId, description: USERS_ROLE_DESCRIPTION, now } }
+    );
 
     const superCodes = [
       'campaign:read',
@@ -102,7 +114,7 @@ module.exports = {
       'placement:manage',
       'report:read',
     ];
-    const usersCodes = ['campaign:read', 'creative:upload', 'report:read'];
+    const usersCodes = USERS_READ_PERMISSIONS;
 
     for (const code of superCodes) {
       await ensureRolePermission(queryInterface, sequelize, superId, permissionIds[code]);
@@ -113,6 +125,15 @@ module.exports = {
     for (const code of usersCodes) {
       await ensureRolePermission(queryInterface, sequelize, usersId, permissionIds[code]);
     }
+
+    const readList = readPermissionSql(sequelize);
+    await sequelize.query(
+      `DELETE rp FROM role_permissions rp
+       INNER JOIN permissions p ON p.id = rp.permission_id
+       WHERE rp.role_id = :roleId
+         AND p.code NOT IN (${readList})`,
+      { replacements: { roleId: usersId } }
+    );
   },
 
   async down(queryInterface) {

@@ -4,6 +4,7 @@ const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const { createPlacementKey } = require('../utils/tokens');
 const { assertAdvertiserAccess } = require('../utils/scope');
+const { assertNotUsers } = require('../utils/usersAccess');
 
 const schema = z.object({
   site_id: z.coerce.number().int().positive(),
@@ -63,6 +64,7 @@ const getOne = asyncHandler(async (req, res) => {
 });
 
 const create = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user);
   const body = schema.parse(req.body);
   const site = await db.Site.findByPk(body.site_id);
   if (!site) throw new AppError('VALIDATION_ERROR', 'Site tidak valid', 400);
@@ -80,6 +82,7 @@ const create = asyncHandler(async (req, res) => {
 });
 
 const update = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user);
   const body = schema.partial().parse(req.body);
   const row = await db.Placement.findByPk(req.params.id);
   if (!row) throw new AppError('NOT_FOUND', 'Placement tidak ditemukan', 404);
@@ -95,6 +98,7 @@ const update = asyncHandler(async (req, res) => {
 });
 
 const assignCreatives = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user);
   const body = assignSchema.parse(req.body);
   const placement = await db.Placement.findByPk(req.params.id);
   if (!placement) throw new AppError('NOT_FOUND', 'Placement tidak ditemukan', 404);
@@ -125,6 +129,7 @@ const assignCreatives = asyncHandler(async (req, res) => {
 });
 
 const remove = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user);
   const row = await db.Placement.findByPk(req.params.id);
   if (!row) throw new AppError('NOT_FOUND', 'Placement tidak ditemukan', 404);
   await row.destroy();

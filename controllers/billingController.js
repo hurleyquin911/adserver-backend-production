@@ -7,6 +7,7 @@ const { campaignScopeInclude } = require('../utils/scope');
 const { rangeStart, rangeEnd } = require('../utils/reportTz');
 const env = require('../config/env');
 const { recordRateChange, normalizeRate } = require('../utils/billingRateHistory');
+const { assertNotUsers } = require('../utils/usersAccess');
 
 const dateSchema = z
   .string()
@@ -208,6 +209,7 @@ const history = asyncHandler(async (req, res) => {
 });
 
 const updatePricing = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user);
   const body = pricingChangeSchema.parse(req.body);
   const updated = await db.sequelize.transaction(async (transaction) => {
     const creative = await db.Creative.findByPk(req.params.creativeId, {

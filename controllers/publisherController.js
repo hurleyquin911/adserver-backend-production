@@ -3,6 +3,7 @@ const { Op, fn, col } = require('sequelize');
 const db = require('../models');
 const asyncHandler = require('../utils/asyncHandler');
 const AppError = require('../utils/AppError');
+const { assertNotUsers } = require('../utils/usersAccess');
 const { rangeStart, rangeEnd } = require('../utils/reportTz');
 const { defaultFromTo, emptyTotals, addRow, withRates } = require('../utils/reportMetrics');
 const {
@@ -265,6 +266,7 @@ const getOne = asyncHandler(async (req, res) => {
 });
 
 const create = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user);
   const body = createSchema.parse(req.body);
   const host = parseHost(body.host);
   let advertiserId = body.advertiser_id != null ? Number(body.advertiser_id) : null;
@@ -321,6 +323,7 @@ const create = asyncHandler(async (req, res) => {
 });
 
 const update = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user);
   const body = updateSchema.parse(req.body);
   const row = await db.Publisher.findByPk(req.params.id);
   if (!row) throw new AppError('NOT_FOUND', 'Publisher tidak ditemukan', 404);
@@ -382,6 +385,7 @@ const update = asyncHandler(async (req, res) => {
 });
 
 const remove = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user);
   const row = await db.Publisher.findByPk(req.params.id);
   if (!row) throw new AppError('NOT_FOUND', 'Publisher tidak ditemukan', 404);
 

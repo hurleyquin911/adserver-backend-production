@@ -4,6 +4,7 @@ const db = require('../models');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const { advertiserScopeWhere, assertAdvertiserAccess, isUnscoped } = require('../utils/scope');
+const { assertNotUsers } = require('../utils/usersAccess');
 const {
   ROLE,
   SYSTEM_ROLE_NAMES,
@@ -149,6 +150,7 @@ const getOne = asyncHandler(async (req, res) => {
 });
 
 const create = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user);
   const body = createSchema.parse(req.body);
   if (!isUnscoped(req.user) && req.user.advertiser_id != null) {
     body.advertiser_id = Number(req.user.advertiser_id);
@@ -175,6 +177,7 @@ const create = asyncHandler(async (req, res) => {
 });
 
 const update = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user);
   const body = updateSchema.parse(req.body);
   const user = await db.User.findByPk(req.params.id, {
     include: [{ model: db.Role, as: 'role', attributes: ['id', 'name'] }],
@@ -222,6 +225,7 @@ const update = asyncHandler(async (req, res) => {
 });
 
 const remove = asyncHandler(async (req, res) => {
+  assertNotUsers(req.user);
   const user = await db.User.findByPk(req.params.id, {
     include: [{ model: db.Role, as: 'role', attributes: ['id', 'name'] }],
   });
